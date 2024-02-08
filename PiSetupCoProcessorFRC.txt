@@ -1,0 +1,114 @@
+# How to configure a Raspberry PI as a co-processor for an FRC robot.
+# This configuration allows control of NeoPixel LED strips.
+# Documented at: https://github.com/Trex4935/RaspberryPi-4935
+# Instructions written by Robert C Smith II
+# Coding Mentor / FRC Team #4935 T-Rex
+# email: robertcsmith719@gmail.com
+
+### Note: I prefer vi as my text editor (OG linux guy), 
+### but feel free to use nano in place of vi in these instructions.
+### All commands can be run in a GUI terminal window or command line.
+
+# Install an OS image on the Raspberry PI SD card.
+# I prefer rasbian since it is built specifically for the PI.
+# It can be loaded using the Raspberry PI Imager tool.
+# You can download the imager tool and get instructions here:
+#		https://www.raspberrypi.com/software/
+
+# Once the PI is up and running, perform system upgrades and load needed packages.
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install python3-pip
+sudo pip3 install --upgrade setuptools
+sudo pip3 install adafruit-circuitpython-neopixel
+sudo pip3 install --upgrade adafruit-python-shell
+
+# To set up a static IP address for your Raspberry Pi:
+# Get router gateway IP
+ip r | grep default
+# To find the current DNS IP address, enter the command:
+cat /etc/resolv.conf
+# Edit the dhcpcd.conf configuration file to add the settings you need.
+sudo vi /etc/dhcpcd.conf
+# Entries to add to dhcpcd.conf based on your network:
+# • NETWORK – your network connection type: eth0 (Ethernet) or wlan0 (wireless).
+# • STATIC_IP – the static IP address you want to set for the Raspberry Pi.
+# • ROUTER_IP – the gateway IP address for your router on the local network.
+# • DNS_IP – the DNS IP address (typically the same as your router’s gateway address).
+interface NETWORK 
+static ip_address=STATIC_IP/24
+static routers=ROUTER_IP 
+static domain_name_servers=DNS_IP
+
+# T-Rex #4935 Team Specific Settings:
+interface eth0 
+static ip_address=10.49.35.123/24
+static routers=10.49.35.1 
+static domain_name_servers=10.49.35.1
+
+#Create paths for script locations
+mkdir /home/trexpi/
+mkdir /home/trexpi/scripts/
+
+# Set aliases for ease of moving around file system
+# We store our scripts in the path of /home/trexpi/scripts/
+# Choose a path that fits your team's needs.
+aliases (specific to T-Rex's chosen file paths)
+vi ~/.bashrc
+	alias scr='cd /home/trexpi/scripts/'
+	alias scrt='cd /home/trexpi/scripts/test/'
+	alias neo='cd /home/trexpi/scripts/neopixel/'
+	alias nett='cd /home/trexpi/scripts/network_tables/'
+	alias loff='/home/trexpi/scripts/test/leds_off.py'
+	alias slog='tail -f /var/log/syslog'
+
+	
+# Update boot config to set proper clock freq for PWM on GPIO pins.
+# If this is not set, the NeoPixel LEDs will not respond.
+sudo vi /boot/config.txt 
+#	add line: 
+	core_freq=250
+
+# The configs below setup the LED control service
+# so that the PI listens to NetworkTables on the RoboRio.
+# T-Rex's basic LED control script is named ledControl.py
+# It is available on the git repo,
+# but it can be any python script your team creates.
+
+# Setup the LED control script as a service.
+# This can be any script that you want to execute at startup and stay running.
+# The LED control script for this config is in the path:
+#	/home/trexpi/scripts/ledControl.py
+# Edit the service config file you create for your service.
+sudo vi /lib/systemd/system/led.service
+# Add the configs below. Be sure to use your team's file paths.
+# //service file config start.
+[Unit]
+Description=LED Service for NanoPixels control from NetworkTables
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=sudo /usr/bin/python3 /home/trexpi/scripts/ledControl.py
+#Restart=on-abort
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+# //service file config end.
+
+# Set file permissions for the new service and make the script executable.
+sudo chmod 644 /lib/systemd/system/led.service 
+chmod +x /home/trexpi/scripts/ledControl.py
+
+# Reload the daemon so that it picks up the service addition / changes.
+sudo systemctl daemon-reload
+# Enable the LED service
+sudo systemctl enable led.service
+# Start the LED service.
+sudo systemctl start led.service
+# Check the LED service status.
+sudo systemctl status led.service
+# Stop the LED service if needed; when making changes to the script or service.
+sudo systemctl stop led.service

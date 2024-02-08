@@ -1,0 +1,17 @@
+Charged Up - FRC 2023
+Godzilla  
+
+Network Table Info
+LED Controls
+
+
+Arm Side
+	Battery
+	Compressor
+	
+Game Object
+	Cone
+	Cube
+	
+Autonomous
+	Run Start
