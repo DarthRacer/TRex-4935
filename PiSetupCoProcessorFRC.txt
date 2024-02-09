@@ -46,9 +46,10 @@ static ip_address=10.49.35.123/24
 static routers=10.49.35.1 
 static domain_name_servers=10.49.35.1
 
-#Create paths for script locations
+#Create paths for script and log locations
 mkdir /home/trexpi/
 mkdir /home/trexpi/scripts/
+mkdir /home/trexpi/scripts/logs
 
 # Set aliases for ease of moving around file system
 # We store our scripts in the path of /home/trexpi/scripts/
